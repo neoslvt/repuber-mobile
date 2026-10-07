@@ -2,10 +2,7 @@
 
 Мобильное приложение на Expo. Ищет книгу на RanobeLib или MangaLib ( или других кастомных ядрах ), принимает прямую ссылку, собирает EPUB и сохраняет его на устройстве.
 
-![Меню](docs/menu.jpg)
-![Поиск](docs/search.jpg)
-![Ранобэ](docs/parsed.jpg)
-![Скачивание](docs/download.jpg)
+<img src="docs/menu.jpg" width="210"> <img src="docs/search.jpg" width="210"> <img src="docs/parsed.jpg" width="210"> <img src="docs/download.jpg" width="210">
 
 Источники лежат в `ranobelib-epub/src/cores`. Приложение их только вызывает. Готовые файлы на телефоне пишутся в `Documents/RanobeLibrary`. На Android книгу можно открыть в установленной читалке или отправить через меню «Поделиться».
 
