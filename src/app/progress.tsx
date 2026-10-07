@@ -97,7 +97,9 @@ export default function ProgressScreen() {
 
             {building ? (
               <Text style={[styles.hint, { color: theme.textSecondary }]}>
-                Downloading chapters and packing the EPUB. Keep the app open until it finishes.
+                {Platform.OS === 'android'
+                  ? 'Downloading chapters and packing the EPUB. You can leave the app — progress stays in the notification.'
+                  : 'Downloading chapters and packing the EPUB. Keep the app open until it finishes.'}
               </Text>
             ) : null}
 

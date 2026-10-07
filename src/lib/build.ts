@@ -1,4 +1,5 @@
 import { buildBook } from '@/lib/cores';
+import { syncDownloadNotification } from '@/lib/download-notification';
 import { saveBook } from '@/lib/library';
 import { messageOf } from '@/lib/text';
 import type { BuildInput, BuildJob, BuildSnapshot } from '@/lib/types';
@@ -13,6 +14,7 @@ let notice = '';
 function publish(next: BuildSnapshot | null) {
   snapshot = next;
   for (const listener of listeners) listener(next);
+  if (next) syncDownloadNotification(next);
 }
 
 export function subscribeBuild(listener: Listener) {

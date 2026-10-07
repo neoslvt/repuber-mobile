@@ -1,0 +1,6 @@
+{
+  "name": "download-progress",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Android notification that shows EPUB download progress."
+}
