@@ -1,38 +1,47 @@
 import '@/global.css';
 
-import { Platform } from 'react-native';
+import { Platform, PlatformColor, type ColorValue } from 'react-native';
+
+// Android 12+ publishes the wallpaper palette as system_accent* and system_neutral*.
+// Older phones, iOS, and web keep the paper palette.
+function sys(name: string, fallback: string): ColorValue {
+  if (Platform.OS === 'android' && Number(Platform.Version) >= 31) {
+    return PlatformColor(`@android:color/${name}`);
+  }
+  return fallback;
+}
 
 export const Colors = {
   light: {
-    text: '#1C1712',
-    textSecondary: '#74695F',
-    background: '#F3EEE6',
-    backgroundElement: '#FFFCF8',
-    backgroundSelected: '#F4E6D8',
-    border: '#E3D8CB',
-    accent: '#9C4221',
-    accentText: '#FFFCF8',
+    text: sys('system_neutral1_900', '#1C1712'),
+    textSecondary: sys('system_neutral2_700', '#74695F'),
+    background: sys('system_neutral1_50', '#F3EEE6'),
+    backgroundElement: sys('system_neutral1_0', '#FFFCF8'),
+    backgroundSelected: sys('system_accent1_100', '#F4E6D8'),
+    border: sys('system_neutral2_200', '#E3D8CB'),
+    accent: sys('system_accent1_600', '#9C4221'),
+    accentText: sys('system_accent1_0', '#FFFCF8'),
     danger: '#9F2D2D',
     dangerBg: '#F8E6E3',
     shadow: 'rgba(28, 23, 18, 0.08)',
   },
   dark: {
-    text: '#F6F1EA',
-    textSecondary: '#B3A79B',
-    background: '#100E0C',
-    backgroundElement: '#1C1916',
-    backgroundSelected: '#2C241E',
-    border: '#322C27',
-    accent: '#E7B089',
-    accentText: '#1C1712',
+    text: sys('system_neutral1_50', '#F6F1EA'),
+    textSecondary: sys('system_neutral2_200', '#B3A79B'),
+    background: sys('system_neutral1_900', '#100E0C'),
+    backgroundElement: sys('system_neutral1_800', '#1C1916'),
+    backgroundSelected: sys('system_accent1_800', '#2C241E'),
+    border: sys('system_neutral1_700', '#322C27'),
+    accent: sys('system_accent1_200', '#E7B089'),
+    accentText: sys('system_neutral1_900', '#1C1712'),
     danger: '#F0B4AE',
     dangerBg: '#3A2220',
     shadow: 'rgba(0, 0, 0, 0.4)',
   },
-} as const;
+};
 
 export type Palette = {
-  [K in keyof typeof Colors.light]: string;
+  [K in keyof typeof Colors.light]: ColorValue;
 };
 export type ThemeColor = keyof Palette;
 

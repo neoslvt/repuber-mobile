@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   Platform,
   Pressable,
   RefreshControl,
@@ -10,6 +11,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,6 +28,7 @@ import type { LibraryBook, SearchHit } from '@/lib/types';
 export default function HomeScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
   const router = useRouter();
   const [sources] = useState(listSources);
   const [sourceId, setSourceId] = useState(() => sources[0]?.id ?? '');
@@ -37,6 +40,9 @@ export default function HomeScreen() {
   const [results, setResults] = useState<{ query: string; hits: SearchHit[] } | null>(null);
   const [books, setBooks] = useState<LibraryBook[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [shelfWidth, setShelfWidth] = useState(0);
+  const sourceRef = useRef<View>(null);
+  const [sourceMenu, setSourceMenu] = useState<{ top: number; right: number } | null>(null);
 
   const source = sources.find((item) => item.id === sourceId) ?? sources[0];
   const where = Platform.OS === 'web' ? 'In this browser' : 'On this phone';
@@ -81,6 +87,16 @@ export default function HomeScreen() {
     setResults(null);
     setError('');
     writeSourceId(id);
+    setSourceMenu(null);
+  }
+
+  function openSourceMenu() {
+    sourceRef.current?.measureInWindow((x, y, width, height) => {
+      setSourceMenu({
+        top: y + height + 6,
+        right: Math.max(12, windowWidth - x - width),
+      });
+    });
   }
 
   async function submit() {
@@ -167,33 +183,20 @@ export default function HomeScreen() {
           />
         }>
         <View style={styles.frame}>
-          <Text style={[styles.mark, { color: theme.accent, fontFamily: Fonts?.serif }]}>REPUBer</Text>
-          <Text style={[styles.lead, { color: theme.textSecondary }]}>
-            Search a title or paste a link, then save the book as an EPUB.
-          </Text>
-
-          <View style={[styles.segment, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
-            {sources.map((item) => {
-              const selected = item.id === source?.id;
-              return (
-                <Pressable
-                  key={item.id}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected }}
-                  onPress={() => chooseSource(item.id)}
-                  style={[styles.segmentItem, selected && { backgroundColor: theme.accent }]}>
-                  <Text
-                    numberOfLines={1}
-                    style={[styles.segmentLabel, { color: selected ? theme.accentText : theme.text }]}>
-                    {item.name}
-                  </Text>
-                </Pressable>
-              );
-            })}
+          <View style={styles.header}>
+            <Text style={[styles.mark, { color: theme.text, fontFamily: Fonts?.serif }]}>REPUBer</Text>
+            <View ref={sourceRef} collapsable={false}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={source?.name || 'Source'}
+                onPress={openSourceMenu}
+                hitSlop={8}
+                style={[styles.sourceButton, 
+                { borderColor: theme.border, borderWidth: StyleSheet.hairlineWidth, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: theme.backgroundElement }]}>
+                <Text style={[styles.sourceName, { color: theme.text }]}>{source?.name}</Text>
+              </Pressable>
+            </View>
           </View>
-          {source?.description ? (
-            <Text style={[styles.sourceHint, { color: theme.textSecondary }]}>{source.description}</Text>
-          ) : null}
 
           <View style={[styles.search, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
             <TextInput
@@ -211,14 +214,18 @@ export default function HomeScreen() {
               accessibilityRole="button"
               disabled={searching || !query.trim()}
               onPress={submit}
-              style={({ pressed }) => [
-                styles.searchButton,
-                { backgroundColor: theme.accent, opacity: searching || !query.trim() ? 0.45 : pressed ? 0.85 : 1 },
-              ]}>
+              hitSlop={6}
+              style={styles.searchButton}>
               {searching ? (
-                <ActivityIndicator color={theme.accentText} />
+                <ActivityIndicator color={theme.accent} />
               ) : (
-                <Text style={[styles.searchLabel, { color: theme.accentText }]}>Search</Text>
+                <Text
+                  style={[
+                    styles.searchLabel,
+                    { color: query.trim() ? theme.accent : theme.textSecondary },
+                  ]}>
+                  Search
+                </Text>
               )}
             </Pressable>
           </View>
@@ -241,36 +248,32 @@ export default function HomeScreen() {
               </View>
               <Text style={[styles.sectionHint, { color: theme.textSecondary }]}>for “{results.query}”</Text>
               {results.hits.length ? (
-                results.hits.map((hit) => (
-                  <Pressable
-                    key={`${hit.core}-${hit.slug}`}
-                    onPress={() => openHit(hit)}
-                    style={({ pressed }) => [
-                      styles.card,
-                      {
-                        backgroundColor: theme.backgroundElement,
-                        borderColor: theme.border,
-                        opacity: pressed ? 0.85 : 1,
-                      },
-                    ]}>
-                    <Cover uri={hit.cover} title={hit.title} width={52} radius={6} />
-                    <View style={styles.cardBody}>
-                      <Text style={[styles.cardTitle, { color: theme.text }]} numberOfLines={2}>
-                        {hit.title}
-                      </Text>
-                      {hit.alt && hit.alt !== hit.title ? (
-                        <Text style={[styles.meta, { color: theme.textSecondary }]} numberOfLines={1}>
-                          {hit.alt}
+                <View style={styles.results}>
+                  {results.hits.map((hit) => (
+                    <Pressable
+                      key={`${hit.core}-${hit.slug}`}
+                      onPress={() => openHit(hit)}
+                      android_ripple={{ color: theme.border }}
+                      style={({ pressed }) => [styles.row, pressed && { opacity: 0.72 }]}>
+                      <Cover uri={hit.cover} title={hit.title} width={64} radius={4} />
+                      <View style={styles.cardBody}>
+                        <Text style={[styles.cardTitle, { color: theme.text }]} numberOfLines={2}>
+                          {hit.title}
                         </Text>
-                      ) : null}
-                      <Text style={[styles.meta, { color: theme.textSecondary }]} numberOfLines={1}>
-                        {[hit.type, hit.year, hit.rating ? `★ ${hit.rating}` : '', hit.status]
-                          .filter(Boolean)
-                          .join(' · ')}
-                      </Text>
-                    </View>
-                  </Pressable>
-                ))
+                        {hit.alt && hit.alt !== hit.title ? (
+                          <Text style={[styles.meta, { color: theme.textSecondary }]} numberOfLines={1}>
+                            {hit.alt}
+                          </Text>
+                        ) : null}
+                        <Text style={[styles.meta, { color: theme.textSecondary }]} numberOfLines={1}>
+                          {[hit.type, hit.year, hit.rating ? `★ ${hit.rating}` : '', hit.status]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  ))}
+                </View>
               ) : (
                 <Text style={[styles.empty, { color: theme.textSecondary }]}>
                   Try another title, or paste a link.
@@ -285,34 +288,37 @@ export default function HomeScreen() {
               <Text style={[styles.sectionHint, { color: theme.textSecondary }]}>{where}</Text>
             </View>
             {books.length ? (
-              books.map((book) => (
-                <View
-                  key={book.name}
-                  style={[styles.card, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
-                  <View style={styles.cardBody}>
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={`Open ${displayTitle(book.name)}`}
-                      onPress={() => openSaved(book)}
-                      style={({ pressed }) => ({ opacity: pressed ? 0.75 : 1 })}>
-                      <Text style={[styles.cardTitle, { color: theme.text }]} numberOfLines={2}>
-                        {displayTitle(book.name)}
-                      </Text>
-                      <Text style={[styles.meta, { color: theme.textSecondary }]}>{book.mb} MB</Text>
-                    </Pressable>
-                    <View style={styles.actions}>
-                      <Pressable onPress={() => shareSaved(book)} hitSlop={6}>
-                        <Text style={[styles.textButton, { color: theme.accent }]}>
-                          {Platform.OS === 'web' ? 'Download' : 'Share'}
+              <View style={styles.shelf} onLayout={(event) => setShelfWidth(event.nativeEvent.layout.width)}>
+                {books.map((book) => {
+                  const title = displayTitle(book.name);
+                  const column = shelfWidth > 0 ? Math.floor((shelfWidth - 16) / 2) : 156;
+                  return (
+                    <View key={book.name} style={[styles.shelfItem, { width: column }]}>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={`Open ${title}`}
+                        onPress={() => openSaved(book)}
+                        style={({ pressed }) => pressed && { opacity: 0.75 }}>
+                        {book.cover ? <Cover uri={book.cover} title={title} width={column} radius={4} /> : null}
+                        <Text style={[styles.cardTitle, { color: theme.text, marginTop: book.cover ? 8 : 0 }]} numberOfLines={2}>
+                          {title}
                         </Text>
+                        <Text style={[styles.meta, { color: theme.textSecondary }]}>{book.mb} MB</Text>
                       </Pressable>
-                      <Pressable onPress={() => confirmRemove(book)} hitSlop={6}>
-                        <Text style={[styles.textButton, { color: theme.textSecondary }]}>Remove</Text>
-                      </Pressable>
+                      <View style={styles.shelfActions}>
+                        <Pressable onPress={() => shareSaved(book)} hitSlop={8}>
+                          <Text style={[styles.textButton, { color: theme.accent }]}>
+                            {Platform.OS === 'web' ? 'Download' : 'Share'}
+                          </Text>
+                        </Pressable>
+                        <Pressable onPress={() => confirmRemove(book)} hitSlop={8}>
+                          <Text style={[styles.textButton, { color: theme.textSecondary }]}>Remove</Text>
+                        </Pressable>
+                      </View>
                     </View>
-                  </View>
-                </View>
-              ))
+                  );
+                })}
+              </View>
             ) : (
               <Text style={[styles.empty, { color: theme.textSecondary }]}>
                 Books you build will appear here.
@@ -321,6 +327,37 @@ export default function HomeScreen() {
           </View>
         </View>
       </ScrollView>
+
+      <Modal
+        visible={sourceMenu != null}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setSourceMenu(null)}>
+        <View style={styles.menuLayer}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setSourceMenu(null)} />
+          <View
+            style={[
+              styles.menu,
+              sourceMenu,
+              { backgroundColor: theme.backgroundElement },
+            ]}>
+            {sources.map((item) => {
+              const selected = item.id === source?.id;
+              return (
+                <Pressable
+                  key={item.id}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  onPress={() => chooseSource(item.id)}
+                  style={[styles.menuRow, selected && { backgroundColor: theme.backgroundSelected }]}>
+                  <Text style={[styles.menuLabel, { color: selected ? theme.accent : theme.text }]}>{item.name}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      </Modal>
 
       {toast ? (
         <View
@@ -351,71 +388,78 @@ const styles = StyleSheet.create({
     maxWidth: MaxContentWidth,
     paddingHorizontal: 20,
   },
-  mark: {
-    fontSize: 34,
-    lineHeight: 40,
-  },
-  lead: {
-    marginTop: 6,
-    fontSize: 16,
-    lineHeight: 22,
-    maxWidth: 460,
-  },
-  segment: {
-    marginTop: 22,
+  header: {
     flexDirection: 'row',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 14,
-    padding: 4,
-    gap: 4,
-  },
-  segmentItem: {
-    flex: 1,
-    minHeight: 40,
-    borderRadius: 10,
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 8,
+    justifyContent: 'space-between',
+    gap: 12,
   },
-  segmentLabel: {
-    fontSize: 15,
+  mark: {
+    flexShrink: 1,
+    fontSize: 32,
+    lineHeight: 38,
+  },
+  sourceButton: {
+    flexShrink: 1,
+    paddingVertical: 8,
+    paddingLeft: 12,
+  },
+  sourceName: {
+    fontSize: 16,
     fontWeight: '600',
   },
-  sourceHint: {
-    marginTop: 8,
-    fontSize: 13,
+  menuLayer: {
+    flex: 1,
+  },
+  menu: {
+    position: 'absolute',
+    zIndex: 2,
+    minWidth: 196,
+    borderRadius: 12,
+    paddingVertical: 6,
+    elevation: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+  },
+  menuRow: {
+    minHeight: 48,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  menuLabel: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   search: {
-    marginTop: 14,
-    minHeight: 56,
-    borderRadius: 16,
+    marginTop: 16,
+    minHeight: 48,
+    borderRadius: 8,
     borderWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingLeft: 16,
+    paddingLeft: 14,
     paddingRight: 6,
-    paddingVertical: 6,
-    gap: 8,
   },
   input: {
     flex: 1,
     fontSize: 16,
-    paddingVertical: 8,
+    paddingVertical: 10,
   },
   searchButton: {
-    minWidth: 92,
-    height: 44,
-    borderRadius: 12,
+    minWidth: 72,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 14,
+    paddingHorizontal: 8,
   },
   searchLabel: {
     fontSize: 15,
     fontWeight: '600',
   },
   banner: {
-    marginTop: 14,
+    marginTop: 16,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -425,8 +469,8 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   section: {
-    marginTop: 32,
-    gap: 10,
+    marginTop: 16,
+    gap: 8,
   },
   sectionHead: {
     flexDirection: 'row',
@@ -435,19 +479,34 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 17,
     fontWeight: '600',
   },
   sectionHint: {
     fontSize: 13,
   },
-  card: {
-    borderRadius: 16,
-    borderWidth: StyleSheet.hairlineWidth,
-    padding: 12,
+  results: {
+    gap: 18,
+    marginTop: 4,
+  },
+  row: {
     flexDirection: 'row',
-    gap: 12,
     alignItems: 'center',
+    gap: 14,
+  },
+  shelf: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    marginTop: 4,
+  },
+  shelfItem: {
+    gap: 4,
+  },
+  shelfActions: {
+    flexDirection: 'row',
+    gap: 14,
+    marginTop: 4,
   },
   cardBody: {
     flex: 1,
@@ -461,11 +520,6 @@ const styles = StyleSheet.create({
   meta: {
     fontSize: 13,
     lineHeight: 18,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: 16,
-    marginTop: 6,
   },
   textButton: {
     fontSize: 14,
@@ -482,7 +536,7 @@ const styles = StyleSheet.create({
     right: 20,
     maxWidth: MaxContentWidth - 40,
     alignSelf: 'center',
-    borderRadius: 14,
+    borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 14,
   },

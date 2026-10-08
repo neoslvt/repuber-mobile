@@ -3,6 +3,7 @@ import * as IntentLauncher from 'expo-intent-launcher';
 import * as Sharing from 'expo-sharing';
 import { Platform } from 'react-native';
 
+import { coverBytes } from '@/lib/epub-cover';
 import type { LibraryBook } from '@/lib/types';
 import { epubBaseName } from '@/lib/text';
 
@@ -22,15 +23,53 @@ function bookFile(name: string) {
   return new File(libraryDir(), epubBaseName(name));
 }
 
+function bookBase(name: string) {
+  return name.replace(/\.epub$/i, '');
+}
+
+function writeCoverFile(base: string, ext: string, bytes: Uint8Array) {
+  const file = new File(libraryDir(), `${base}.cover.${ext}`);
+  if (file.exists) file.delete();
+  file.create();
+  file.write(bytes);
+  return file.uri;
+}
+
+async function cacheCover(epub: File) {
+  const base = bookBase(epub.name);
+  try {
+    const found = coverBytes(await epub.bytes());
+    if (!found) {
+      const marker = new File(libraryDir(), `${base}.cover.none`);
+      if (!marker.exists) marker.create();
+      return undefined;
+    }
+    return writeCoverFile(base, found.ext, found.bytes);
+  } catch {
+    return undefined;
+  }
+}
+
 export async function listBooks(): Promise<LibraryBook[]> {
+  const items = libraryDir().list().filter((item): item is File => item instanceof File);
+  const covers = new Map<string, string>();
+  const skipped = new Set<string>();
+  for (const item of items) {
+    const image = /^(.*)\.cover\.(jpe?g|png|webp)$/i.exec(item.name);
+    if (image && item.size > 0) covers.set(image[1], item.uri);
+    if (item.name.endsWith('.cover.none')) skipped.add(item.name.slice(0, -'.cover.none'.length));
+  }
   const books: LibraryBook[] = [];
-  for (const item of libraryDir().list()) {
-    if (!(item instanceof File)) continue;
+  for (const item of items) {
     if (!item.name.toLowerCase().endsWith('.epub')) continue;
+    const base = bookBase(item.name);
+    let cover = covers.get(base);
+    if (!cover && !skipped.has(base)) cover = await cacheCover(item);
     books.push({
       name: item.name,
       mb: Math.round((item.size / 1e6) * 10) / 10,
       mtime: item.lastModified ?? 0,
+      cover,
     });
   }
   books.sort((a, b) => b.mtime - a.mtime);
@@ -51,6 +90,8 @@ export async function saveBook(name: string, bytes: Uint8Array) {
   } finally {
     handle.close();
   }
+  const found = coverBytes(bytes);
+  if (found) writeCoverFile(bookBase(file.name), found.ext, found.bytes);
 }
 
 export async function shareBook(name: string) {
@@ -94,6 +135,11 @@ export async function openBook(name: string) {
 export async function deleteBook(name: string) {
   const file = bookFile(name);
   if (file.exists) file.delete();
+  const base = bookBase(file.name);
+  for (const item of libraryDir().list()) {
+    if (!(item instanceof File)) continue;
+    if (item.name.startsWith(`${base}.cover.`)) item.delete();
+  }
 }
 
 export async function readSourceId() {

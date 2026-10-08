@@ -69,6 +69,7 @@ export type LibraryBook = {
   name: string;
   mb: number;
   mtime: number;
+  cover?: string;
 };
 
 export type BuildSnapshot = {

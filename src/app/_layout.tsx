@@ -10,7 +10,9 @@ export default function RootLayout() {
   const scheme = useScheme();
 
   useEffect(() => {
-    SystemUI.setBackgroundColorAsync(theme.background);
+    if (typeof theme.background === 'string') {
+      SystemUI.setBackgroundColorAsync(theme.background);
+    }
   }, [theme.background]);
 
   return (

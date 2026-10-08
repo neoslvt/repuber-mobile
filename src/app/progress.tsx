@@ -74,26 +74,31 @@ export default function ProgressScreen() {
           </View>
         ) : (
           <>
-            <Cover uri={job.cover} title={job.title} width={84} radius={8} />
-            <Text style={[styles.title, { color: theme.text, fontFamily: Fonts?.serif }]}>{job.title}</Text>
-            {job.team ? (
-              <Text style={[styles.team, { color: theme.textSecondary }]}>Translated by {job.team}</Text>
-            ) : null}
+            <View style={styles.book}>
+              <Cover uri={job.cover} title={job.title} width={64} radius={3} />
+              <View style={styles.bookText}>
+                <Text style={[styles.title, { color: theme.text, fontFamily: Fonts?.serif }]}>{job.title}</Text>
+                {job.team ? (
+                  <Text style={[styles.team, { color: theme.textSecondary }]}>Translated by {job.team}</Text>
+                ) : null}
+              </View>
+            </View>
 
-            <Text style={[styles.percent, { color: theme.text, fontFamily: Fonts?.serif }]}>{pct}%</Text>
+            <View style={styles.progressHead}>
+              <Text style={[styles.msg, { color: theme.text }]}>
+                {job.state === 'error' ? 'Build stopped' : job.msg}
+              </Text>
+              <Text style={[styles.percent, { color: theme.text }]}>{pct}%</Text>
+            </View>
             <View style={[styles.track, { backgroundColor: theme.backgroundSelected }]}>
               <View style={[styles.fill, { width: `${pct}%`, backgroundColor: theme.accent }]} />
             </View>
-
-            <Text style={[styles.msg, { color: theme.text }]}>
-              {job.state === 'error' ? 'Build stopped' : job.msg}
-            </Text>
-            {job.state === 'running' ? <ActivityIndicator color={theme.accent} style={styles.spinner} /> : null}
             {job.total ? (
               <Text style={[styles.meta, { color: theme.textSecondary }]}>
                 {job.done} of {job.total} chapters
               </Text>
             ) : null}
+            {job.state === 'running' ? <ActivityIndicator color={theme.accent} style={styles.spinner} /> : null}
 
             {building ? (
               <Text style={[styles.hint, { color: theme.textSecondary }]}>
@@ -163,8 +168,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: MaxContentWidth,
     alignSelf: 'center',
-    paddingHorizontal: 24,
-    alignItems: 'center',
+    paddingHorizontal: 20,
   },
   center: {
     flex: 1,
@@ -172,40 +176,51 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 16,
   },
+  book: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  bookText: {
+    flex: 1,
+    gap: 4,
+  },
   title: {
-    marginTop: 18,
-    fontSize: 26,
-    lineHeight: 32,
-    textAlign: 'center',
+    fontSize: 22,
+    lineHeight: 28,
   },
   team: {
-    marginTop: 6,
     fontSize: 14,
-    textAlign: 'center',
+    lineHeight: 20,
+  },
+  progressHead: {
+    marginTop: 28,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: 12,
   },
   percent: {
-    marginTop: 28,
-    fontSize: 64,
-    lineHeight: 72,
+    fontSize: 15,
+    fontWeight: '600',
+    fontVariant: ['tabular-nums'],
   },
   track: {
-    alignSelf: 'stretch',
-    height: 8,
-    borderRadius: 99,
+    height: 4,
+    borderRadius: 2,
     overflow: 'hidden',
     marginTop: 8,
   },
   fill: {
     height: '100%',
-    borderRadius: 99,
   },
   msg: {
-    marginTop: 16,
+    flex: 1,
     fontSize: 16,
-    textAlign: 'center',
+    lineHeight: 22,
   },
   meta: {
-    marginTop: 4,
+    marginTop: 8,
     fontSize: 14,
   },
   spinner: {
@@ -215,18 +230,15 @@ const styles = StyleSheet.create({
     marginTop: 18,
     fontSize: 14,
     lineHeight: 20,
-    textAlign: 'center',
   },
   banner: {
-    alignSelf: 'stretch',
     marginTop: 18,
-    borderRadius: 12,
+    borderRadius: 8,
     padding: 12,
   },
   bannerText: {
     fontSize: 14,
     lineHeight: 20,
-    textAlign: 'center',
   },
   actions: {
     alignSelf: 'stretch',
@@ -235,8 +247,8 @@ const styles = StyleSheet.create({
     paddingTop: 24,
   },
   primary: {
-    height: 52,
-    borderRadius: 14,
+    height: 48,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },

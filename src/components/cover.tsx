@@ -31,7 +31,14 @@ export function Cover({ uri, width, title, radius = 10 }: CoverProps) {
       {uri ? (
         <Image source={{ uri }} style={styles.image} contentFit="cover" transition={180} />
       ) : (
-        <Text style={[styles.letter, { color: theme.textSecondary, fontFamily: Fonts?.serif }]}>{letter}</Text>
+        <Text
+          style={{
+            color: theme.textSecondary,
+            fontFamily: Fonts?.serif,
+            fontSize: Math.max(22, Math.round(width * 0.32)),
+          }}>
+          {letter}
+        </Text>
       )}
     </View>
   );
@@ -47,8 +54,5 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',
-  },
-  letter: {
-    fontSize: 28,
   },
 });

@@ -1,13 +1,18 @@
+import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
+  type ColorValue,
+  type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -23,9 +28,33 @@ function param(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] || '' : value || '';
 }
 
+// Fade the blurred cover into the page color. A hex color can live in a CSS
+// gradient. Android 12+ wallpaper colors are resource values, so those use the
+// structured gradient, which resolves them on the native side.
+function coverFade(color: ColorValue): ViewStyle {
+  if (typeof color === 'string') {
+    const image = `linear-gradient(to bottom, transparent 0%, transparent 34%, ${color} 76%, ${color} 100%)`;
+    if (Platform.OS === 'web') return { backgroundImage: image } as ViewStyle;
+    return { experimental_backgroundImage: image };
+  }
+  return {
+    experimental_backgroundImage: [
+      {
+        type: 'linear-gradient',
+        direction: 'to bottom',
+        colorStops: [
+          { color: 'transparent', positions: ['0%', '34%'] },
+          { color, positions: ['76%', '100%'] },
+        ],
+      },
+    ],
+  };
+}
+
 export default function BookScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
   const router = useRouter();
   const params = useLocalSearchParams<{ core?: string; q?: string }>();
   const core = param(params.core);
@@ -35,7 +64,7 @@ export default function BookScreen() {
   const [branchId, setBranchId] = useState<string | number | null>(null);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [tagsOpen, setTagsOpen] = useState(false);
-  const [tileWidth, setTileWidth] = useState(0);
+  const [gridWidth, setGridWidth] = useState(0);
 
   const requestKey = `${core}\n${query}`;
   const visible = loaded?.key === requestKey ? loaded : null;
@@ -105,7 +134,7 @@ export default function BookScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.background }]}>
-      <View style={[styles.top, { paddingTop: insets.top + 8 }]}>
+      <View pointerEvents="box-none" style={[styles.top, { paddingTop: insets.top }]}>
         <View style={styles.frame}>
           <Pressable onPress={() => router.back()} hitSlop={10} style={styles.back}>
             <Text style={[styles.backLabel, { color: theme.accent }]}>Back</Text>
@@ -128,12 +157,25 @@ export default function BookScreen() {
         <>
           <ScrollView
             style={styles.fill}
-            contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 132 }]}>
+            contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 48, paddingBottom: insets.bottom + 148 }]}>
+            {book.cover ? (
+              <View pointerEvents="none" style={[styles.wash, { width: windowWidth, height: insets.top + 560 }]}>
+                <Image
+                  source={{ uri: book.cover }}
+                  style={styles.washImage}
+                  contentFit="cover"
+                  blurRadius={64}
+                />
+                <View style={[styles.washFade, coverFade(theme.background)]} />
+              </View>
+            ) : null}
             <View style={styles.frame}>
-              <View style={styles.hero}>
-                <Cover uri={book.cover} title={book.title} width={148} radius={12} />
+              <View style={styles.mast}>
+                <View style={[styles.coverShadow, { backgroundColor: theme.backgroundElement }]}>
+                  <Cover uri={book.cover} title={book.title} width={176} radius={6} />
+                </View>
                 {sourceName ? (
-                  <Text style={[styles.kicker, { color: theme.accent }]}>{sourceName}</Text>
+                  <Text style={[styles.kicker, { color: theme.textSecondary }]}>{sourceName}</Text>
                 ) : null}
                 <Text style={[styles.title, { color: theme.text, fontFamily: Fonts?.serif }]}>{book.title}</Text>
                 {[book.alt, ...book.other].filter((name) => name && name !== book.title).length ? (
@@ -141,45 +183,46 @@ export default function BookScreen() {
                     {[book.alt, ...book.other].filter((name) => name && name !== book.title).join(' · ')}
                   </Text>
                 ) : null}
-                {book.authors.length || book.artists.length ? (
-                  <Text style={[styles.by, { color: theme.text }]}>
-                    {book.authors.join(', ')}
-                    {book.artists.length ? (
-                      <Text style={{ color: theme.textSecondary }}> · Art: {book.artists.join(', ')}</Text>
-                    ) : null}
-                  </Text>
+                {book.authors.length ? (
+                  <Text style={[styles.by, { color: theme.text }]}>{book.authors.join(', ')}</Text>
                 ) : null}
+                {book.artists.length ? (
+                  <Text style={[styles.by, { color: theme.textSecondary }]}>Art · {book.artists.join(', ')}</Text>
+                ) : null}
+                {book.genres.length ? (
+                  <Text style={[styles.genres, { color: theme.textSecondary }]}>{book.genres.join('  ·  ')}</Text>
+                ) : null}
+                <View style={styles.stats}>
+                  <View style={styles.stat}>
+                    <Text style={[styles.statValue, { color: theme.text }]}>{book.volumes.length}</Text>
+                    <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+                      {book.volumes.length === 1 ? 'Volume' : 'Volumes'}
+                    </Text>
+                  </View>
+                  <View style={styles.stat}>
+                    <Text style={[styles.statValue, { color: theme.text }]}>{book.chapters}</Text>
+                    <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+                      {book.chapters === 1 ? 'Chapter' : 'Chapters'}
+                    </Text>
+                  </View>
+                </View>
               </View>
 
-              {book.genres.length ? (
-                <View style={styles.chips}>
-                  {book.genres.map((genre) => (
-                    <View key={genre} style={[styles.chip, { backgroundColor: theme.backgroundSelected }]}>
-                      <Text style={[styles.chipText, { color: theme.text }]}>{genre}</Text>
+              {book.facts.length ? (
+                <View style={styles.facts}>
+                  {book.facts.map(([label, value]) => (
+                    <View key={label} style={styles.fact}>
+                      <Text style={[styles.factLabel, { color: theme.textSecondary }]}>{label}</Text>
+                      <Text style={[styles.factValue, { color: theme.text }]}>{value}</Text>
                     </View>
                   ))}
                 </View>
               ) : null}
 
-              <View style={styles.facts}>
-                {[
-                  ...book.facts,
-                  [
-                    'Chapters',
-                    `${book.chapters} in ${book.volumes.length} volume${book.volumes.length === 1 ? '' : 's'}`,
-                  ] as [string, string],
-                ].map(([label, value]) => (
-                  <View key={label} style={styles.fact}>
-                    <Text style={[styles.factLabel, { color: theme.textSecondary }]}>{label}</Text>
-                    <Text style={[styles.factValue, { color: theme.text }]}>{value}</Text>
-                  </View>
-                ))}
-              </View>
-
-              <Text style={[styles.heading, { color: theme.text }]}>About</Text>
+              <Text style={[styles.heading, { color: theme.textSecondary }]}>About</Text>
               <Text
                 style={[styles.about, { color: theme.text }]}
-                numberOfLines={aboutOpen || !longAbout ? undefined : 6}>
+                numberOfLines={aboutOpen || !longAbout ? undefined : 5}>
                 {about || 'No description available.'}
               </Text>
               {longAbout ? (
@@ -190,13 +233,23 @@ export default function BookScreen() {
 
               {book.tags.length ? (
                 <View style={styles.tags}>
-                  <Pressable onPress={() => setTagsOpen((open) => !open)}>
-                    <Text style={[styles.link, { color: theme.textSecondary }]}>
-                      {tagsOpen ? 'Hide tags' : `Tags (${book.tags.length})`}
-                    </Text>
-                  </Pressable>
-                  {tagsOpen ? (
-                    <Text style={[styles.tagList, { color: theme.textSecondary }]}>{book.tags.join(', ')}</Text>
+                  {book.tags.length > 8 ? (
+                    <Pressable onPress={() => setTagsOpen((open) => !open)} hitSlop={8}>
+                      <Text style={[styles.link, { color: theme.accent, marginTop: 0 }]}>
+                        {tagsOpen ? 'Hide tags' : `Tags · ${book.tags.length}`}
+                      </Text>
+                    </Pressable>
+                  ) : (
+                    <Text style={[styles.heading, { color: theme.textSecondary, marginTop: 0 }]}>Tags</Text>
+                  )}
+                  {book.tags.length <= 8 || tagsOpen ? (
+                    <View style={styles.tagWrap}>
+                      {book.tags.map((tag) => (
+                        <Text key={tag} style={[styles.tag, { color: theme.text }]}>
+                          {tag}
+                        </Text>
+                      ))}
+                    </View>
                   ) : null}
                 </View>
               ) : null}
@@ -209,33 +262,28 @@ export default function BookScreen() {
                 </View>
               ) : null}
 
-              <Text style={[styles.heading, { color: theme.text }]}>Translation</Text>
+              <Text style={[styles.heading, { color: theme.textSecondary }]}>Translation</Text>
               {book.branches.length ? (
-                book.branches.map((item) => {
-                  const on = sameId(item.id, branch?.id);
-                  return (
-                    <Pressable
-                      key={String(item.id)}
-                      onPress={() => setBranchId(item.id)}
-                      style={[
-                        styles.branch,
-                        {
-                          backgroundColor: on ? theme.backgroundSelected : theme.backgroundElement,
-                          borderColor: on ? theme.accent : theme.border,
-                        },
-                      ]}>
-                      <View style={[styles.radio, { borderColor: on ? theme.accent : theme.textSecondary }]}>
-                        {on ? <View style={[styles.radioDot, { backgroundColor: theme.accent }]} /> : null}
-                      </View>
-                      <View style={styles.branchBody}>
-                        <Text style={[styles.branchName, { color: theme.text }]}>{item.name}</Text>
-                        <Text style={[styles.meta, { color: theme.textSecondary }]}>
-                          {item.chapters} chapters
-                        </Text>
-                      </View>
-                    </Pressable>
-                  );
-                })
+                <View style={styles.choices}>
+                  {book.branches.map((item) => {
+                    const on = sameId(item.id, branch?.id);
+                    return (
+                      <Pressable
+                        key={String(item.id)}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: on }}
+                        onPress={() => setBranchId(item.id)}
+                        style={[
+                          styles.branch,
+                          { backgroundColor: on ? theme.backgroundElement : theme.background, borderColor: theme.border },
+                          { borderWidth: StyleSheet.hairlineWidth, borderColor: theme.border }
+                        ]}>
+                        <Text style={[styles.branchName, { color: on ? theme.accent : theme.text }]}>{item.name}</Text>
+                        <Text style={[styles.meta, { color: theme.textSecondary }]}>{item.chapters} chapters</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
               ) : (
                 <Text style={[styles.meta, { color: theme.textSecondary }]}>
                   No translation is available for this book.
@@ -243,36 +291,43 @@ export default function BookScreen() {
               )}
 
               <View style={styles.volumeHead}>
-                <Text style={[styles.heading, { color: theme.text, marginTop: 0 }]}>Volumes</Text>
+                <Text style={[styles.heading, { color: theme.textSecondary, marginTop: 0, marginBottom: 0 }]}>
+                  Volumes
+                </Text>
                 <View style={styles.volumeLinks}>
                   <Pressable onPress={() => setSelected(new Set(book.volumes.map((volume) => volume.v)))} hitSlop={8}>
-                    <Text style={[styles.link, { color: theme.accent }]}>All</Text>
+                    <Text style={[styles.link, { color: theme.accent, marginTop: 0 }]}>All</Text>
                   </Pressable>
                   <Pressable onPress={() => setSelected(new Set())} hitSlop={8}>
-                    <Text style={[styles.link, { color: theme.accent }]}>Clear</Text>
+                    <Text style={[styles.link, { color: theme.accent, marginTop: 0 }]}>None</Text>
                   </Pressable>
                 </View>
               </View>
-              <View
-                style={styles.tiles}
-                onLayout={(event) => setTileWidth(Math.floor((event.nativeEvent.layout.width - 10) / 2))}>
+              <View style={styles.volumes} onLayout={(event) => setGridWidth(event.nativeEvent.layout.width)}>
                 {book.volumes.map((volume) => {
                   const on = selected.has(volume.v);
+                  const columns = gridWidth >= 560 ? 3 : 2;
+                  const tileWidth = gridWidth > 0 ? Math.floor((gridWidth - 10 * (columns - 1)) / columns) : undefined;
                   return (
                     <Pressable
                       key={volume.v}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: on }}
+                      accessibilityLabel={`Volume ${volume.v}`}
                       onPress={() => toggleVolume(volume.v)}
                       style={[
-                        styles.tile,
+                        styles.volume,
                         {
-                          width: tileWidth || '48%',
-                          backgroundColor: on ? theme.backgroundSelected : theme.backgroundElement,
-                          borderColor: on ? theme.accent : theme.border,
+                          width: tileWidth ?? '48%',
+                          backgroundColor: on ? theme.backgroundElement : theme.background,
+                          borderColor: theme.border, borderWidth: StyleSheet.hairlineWidth
                         },
                       ]}>
-                      <Text style={[styles.tileTitle, { color: theme.text }]}>Volume {volume.v}</Text>
+                      <Text style={[styles.volumeTitle, { color: on ? theme.accent : theme.text }]} numberOfLines={1}>
+                        {volume.v}
+                      </Text>
                       <Text style={[styles.meta, { color: theme.textSecondary }]}>
-                        {volume.n} chapter{volume.n === 1 ? '' : 's'}
+                        {volume.n} ch.
                       </Text>
                     </Pressable>
                   );
@@ -285,15 +340,14 @@ export default function BookScreen() {
             style={[
               styles.footer,
               {
-                backgroundColor: theme.background,
-                borderColor: theme.border,
-                paddingBottom: insets.bottom + 12,
+                backgroundColor: theme.backgroundElement,
+                paddingBottom: insets.bottom + 14,
               },
             ]}>
             <View style={styles.frame}>
               <Text style={[styles.summary, { color: theme.textSecondary }]}>
                 {chosen.length
-                  ? `${chosen.length} volume${chosen.length === 1 ? '' : 's'} · ${chapterCount} chapters`
+                  ? `${chosen.length} of ${book.volumes.length} · ${chapterCount} chapters`
                   : 'Select at least one volume'}
               </Text>
               <Pressable
@@ -322,7 +376,32 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   top: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 2,
     paddingBottom: 4,
+  },
+  wash: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    overflow: 'hidden',
+  },
+  washImage: {
+    position: 'absolute',
+    top: '-10%',
+    left: '-10%',
+    width: '120%',
+    height: '120%',
+  },
+  washFade: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   frame: {
     width: '100%',
@@ -354,72 +433,93 @@ const styles = StyleSheet.create({
   scroll: {
     alignItems: 'center',
   },
-  hero: {
+  mast: {
     alignItems: 'center',
-    gap: 8,
+  },
+  coverShadow: {
+    borderRadius: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    elevation: 8,
   },
   kicker: {
-    marginTop: 16,
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
+    marginTop: 18,
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.4,
+    textAlign: 'center',
   },
   title: {
-    fontSize: 28,
-    lineHeight: 34,
+    marginTop: 6,
+    fontSize: 30,
+    lineHeight: 36,
     textAlign: 'center',
   },
   alt: {
+    marginTop: 8,
     fontSize: 14,
     lineHeight: 20,
     textAlign: 'center',
   },
   by: {
+    marginTop: 8,
     fontSize: 15,
     lineHeight: 21,
     textAlign: 'center',
   },
-  chips: {
+  genres: {
+    marginTop: 10,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  stats: {
+    marginTop: 22,
     flexDirection: 'row',
-    flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: 8,
-    marginTop: 16,
+    gap: 36,
   },
-  chip: {
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+  stat: {
+    alignItems: 'center',
+    gap: 2,
+    minWidth: 72,
   },
-  chipText: {
-    fontSize: 13,
+  statValue: {
+    fontSize: 22,
+    fontWeight: '600',
+  },
+  statLabel: {
+    fontSize: 12,
   },
   facts: {
-    marginTop: 20,
-    gap: 8,
+    marginTop: 28,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 18,
   },
   fact: {
-    flexDirection: 'row',
-    gap: 12,
+    minWidth: 104,
+    gap: 2,
   },
   factLabel: {
-    width: 108,
-    fontSize: 14,
+    fontSize: 12,
   },
   factValue: {
-    flex: 1,
-    fontSize: 14,
+    fontSize: 15,
+    lineHeight: 20,
   },
   heading: {
-    marginTop: 28,
+    marginTop: 32,
     marginBottom: 10,
-    fontSize: 20,
+    fontSize: 13,
     fontWeight: '600',
+    letterSpacing: 0.3,
   },
   about: {
     fontSize: 16,
-    lineHeight: 24,
+    lineHeight: 25,
   },
   link: {
     marginTop: 8,
@@ -427,46 +527,36 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   tags: {
-    marginTop: 16,
+    marginTop: 28,
   },
-  tagList: {
-    marginTop: 8,
-    fontSize: 14,
+  tagWrap: {
+    marginTop: 10,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    columnGap: 14,
+    rowGap: 8,
+  },
+  tag: {
+    fontSize: 15,
     lineHeight: 20,
   },
   note: {
-    marginTop: 16,
-    borderRadius: 12,
-    padding: 12,
+    marginTop: 20,
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
   },
   noteText: {
     fontSize: 14,
     lineHeight: 20,
   },
+  choices: {
+    gap: 8,
+  },
   branch: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 14,
-    padding: 12,
-    flexDirection: 'row',
-    gap: 12,
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  radio: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  radioDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  branchBody: {
-    flex: 1,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     gap: 2,
   },
   branchName: {
@@ -478,8 +568,8 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   volumeHead: {
-    marginTop: 20,
-    marginBottom: 10,
+    marginTop: 32,
+    marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -488,20 +578,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 16,
   },
-  tiles: {
+  volumes: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
   },
-  tile: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 14,
-    paddingHorizontal: 12,
+  volume: {
+    minHeight: 76,
+    borderRadius: 12,
+    justifyContent: 'center',
+    paddingHorizontal: 14,
     paddingVertical: 12,
     gap: 2,
   },
-  tileTitle: {
-    fontSize: 15,
+  volumeTitle: {
+    fontSize: 22,
     fontWeight: '600',
   },
   footer: {
@@ -509,13 +600,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    paddingTop: 12,
+    paddingTop: 14,
   },
   summary: {
     fontSize: 13,
-    marginBottom: 8,
-    textAlign: 'center',
+    marginBottom: 10,
   },
   build: {
     height: 52,

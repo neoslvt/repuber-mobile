@@ -1,3 +1,4 @@
+import { coverBytes } from '@/lib/epub-cover';
 import type { LibraryBook } from '@/lib/types';
 import { epubBaseName } from '@/lib/text';
 
@@ -10,7 +11,24 @@ type StoredBook = {
   mtime: number;
   size: number;
   bytes: ArrayBuffer;
+  cover?: ArrayBuffer;
 };
+
+const coverUrls = new Map<string, string | null>();
+
+function coverUrl(row: StoredBook) {
+  const key = `${row.name}:${row.mtime}:${row.size}`;
+  if (coverUrls.has(key)) return coverUrls.get(key) || undefined;
+  const stored = row.cover ? new Uint8Array(row.cover) : coverBytes(new Uint8Array(row.bytes))?.bytes;
+  if (!stored?.length) {
+    coverUrls.set(key, null);
+    return undefined;
+  }
+  const copy = stored.buffer.slice(stored.byteOffset, stored.byteOffset + stored.byteLength) as ArrayBuffer;
+  const url = URL.createObjectURL(new Blob([copy]));
+  coverUrls.set(key, url);
+  return url;
+}
 
 function openDb() {
   return new Promise<IDBDatabase>((resolve, reject) => {
@@ -48,6 +66,7 @@ function toBook(row: StoredBook): LibraryBook {
     name: row.name,
     mb: Math.round((row.size / 1e6) * 10) / 10,
     mtime: row.mtime,
+    cover: coverUrl(row),
   };
 }
 
@@ -59,11 +78,16 @@ export async function listBooks(): Promise<LibraryBook[]> {
 export async function saveBook(name: string, bytes: Uint8Array) {
   const fileName = epubBaseName(name);
   const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+  const found = coverBytes(bytes);
+  const cover = found
+    ? (found.bytes.buffer.slice(found.bytes.byteOffset, found.bytes.byteOffset + found.bytes.byteLength) as ArrayBuffer)
+    : undefined;
   const row: StoredBook = {
     name: fileName,
     mtime: Date.now(),
     size: bytes.byteLength,
     bytes: buffer,
+    cover,
   };
   await withStore('readwrite', (store) => store.put(row, fileName));
 }
