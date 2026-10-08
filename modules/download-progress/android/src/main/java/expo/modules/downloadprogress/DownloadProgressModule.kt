@@ -46,7 +46,7 @@ class DownloadProgressModule : Module() {
         timeoutMs: Double,
         redirect: String,
         promise: Promise ->
-      DownloadExchange.start(url, method, headersJson, body, timeoutMs, redirect, promise)
+      DownloadExchange.start(url, method, headersJson, body, timeoutMs, redirect, context.cacheDir, promise)
     }
 
     Function("finish") { title: String, text: String, success: Boolean ->

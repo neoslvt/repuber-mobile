@@ -1,5 +1,6 @@
 package expo.modules.downloadprogress
 
+import android.net.Uri
 import expo.modules.kotlin.Promise
 import okhttp3.Call
 import okhttp3.Callback
@@ -10,20 +11,25 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import org.json.JSONObject
+import java.io.File
+import java.io.FileOutputStream
 import java.io.IOException
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Downloads a response off the React Native fetch stack.
  *
  * RN's XMLHttpRequest base64-encodes the body and the JS thread decodes it, so a
- * pool of image requests runs one at a time. OkHttp keeps the pool parallel and
- * the bytes are copied straight into a Uint8Array.
+ * pool of image requests runs one at a time. OkHttp writes each body to a cache
+ * file and only the status and headers cross back to JavaScript.
  *
  * [AsyncFunction] runs on a single handler thread, so this method only enqueues
  * the call and returns. The shared dispatcher is what actually runs the requests.
  */
 object DownloadExchange {
+  private val ids = AtomicLong()
+
   private val client: OkHttpClient by lazy {
     OkHttpClient.Builder()
       .dispatcher(
@@ -55,6 +61,7 @@ object DownloadExchange {
     body: String?,
     timeoutMs: Double,
     redirect: String,
+    cacheDir: File,
     promise: Promise,
   ) {
     val call = try {
@@ -74,9 +81,15 @@ object DownloadExchange {
       }
 
       override fun onResponse(call: Call, response: Response) {
+        var out: File? = null
         try {
+          val dir = File(cacheDir, "repuber-fetch").apply { mkdirs() }
+          val dest = File(dir, "${ids.incrementAndGet()}.bin")
+          out = dest
           response.use { incoming ->
-            val bytes = incoming.body?.bytes() ?: ByteArray(0)
+            incoming.body?.byteStream()?.use { input ->
+              FileOutputStream(dest).use { output -> input.copyTo(output, 64 * 1024) }
+            } ?: dest.createNewFile()
             val headerMap = LinkedHashMap<String, String>(incoming.headers.size)
             for (name in incoming.headers.names()) {
               headerMap[name.lowercase()] = incoming.headers.values(name).joinToString(", ")
@@ -84,12 +97,13 @@ object DownloadExchange {
             promise.resolve(
               mapOf(
                 "status" to incoming.code,
-                "bytes" to bytes,
+                "file" to Uri.fromFile(dest).toString(),
                 "headers" to headerMap,
               ),
             )
           }
         } catch (error: Exception) {
+          out?.delete()
           promise.reject("ERR_NETWORK", error.message, error)
         }
       }

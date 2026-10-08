@@ -1,0 +1,29 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="expo.modules.downloadprogress" >
+4
+5    <uses-sdk android:minSdkVersion="24" />
+6
+7    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+7-->/run/media/alex/b9bd9a1e-a4cc-4d3f-aae2-8c8c1fd468cb/ranobe-lib-epub/repuber/modules/download-progress/android/src/main/AndroidManifest.xml:2:3-75
+7-->/run/media/alex/b9bd9a1e-a4cc-4d3f-aae2-8c8c1fd468cb/ranobe-lib-epub/repuber/modules/download-progress/android/src/main/AndroidManifest.xml:2:20-72
+8    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+8-->/run/media/alex/b9bd9a1e-a4cc-4d3f-aae2-8c8c1fd468cb/ranobe-lib-epub/repuber/modules/download-progress/android/src/main/AndroidManifest.xml:3:3-85
+8-->/run/media/alex/b9bd9a1e-a4cc-4d3f-aae2-8c8c1fd468cb/ranobe-lib-epub/repuber/modules/download-progress/android/src/main/AndroidManifest.xml:3:20-82
+9    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+9-->/run/media/alex/b9bd9a1e-a4cc-4d3f-aae2-8c8c1fd468cb/ranobe-lib-epub/repuber/modules/download-progress/android/src/main/AndroidManifest.xml:4:3-75
+9-->/run/media/alex/b9bd9a1e-a4cc-4d3f-aae2-8c8c1fd468cb/ranobe-lib-epub/repuber/modules/download-progress/android/src/main/AndroidManifest.xml:4:20-72
+10
+11    <application>
+11-->/run/media/alex/b9bd9a1e-a4cc-4d3f-aae2-8c8c1fd468cb/ranobe-lib-epub/repuber/modules/download-progress/android/src/main/AndroidManifest.xml:6:3-11:17
+12        <service
+12-->/run/media/alex/b9bd9a1e-a4cc-4d3f-aae2-8c8c1fd468cb/ranobe-lib-epub/repuber/modules/download-progress/android/src/main/AndroidManifest.xml:7:5-10:50
+13            android:name="expo.modules.downloadprogress.DownloadProgressService"
+13-->/run/media/alex/b9bd9a1e-a4cc-4d3f-aae2-8c8c1fd468cb/ranobe-lib-epub/repuber/modules/download-progress/android/src/main/AndroidManifest.xml:8:7-46
+14            android:exported="false"
+14-->/run/media/alex/b9bd9a1e-a4cc-4d3f-aae2-8c8c1fd468cb/ranobe-lib-epub/repuber/modules/download-progress/android/src/main/AndroidManifest.xml:9:7-31
+15            android:foregroundServiceType="dataSync" />
+15-->/run/media/alex/b9bd9a1e-a4cc-4d3f-aae2-8c8c1fd468cb/ranobe-lib-epub/repuber/modules/download-progress/android/src/main/AndroidManifest.xml:10:7-47
+16    </application>
+17
+18</manifest>

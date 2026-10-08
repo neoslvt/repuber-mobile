@@ -3,6 +3,7 @@ import { syncDownloadNotification } from '@/lib/download-notification';
 import { saveBook } from '@/lib/library';
 import { messageOf } from '@/lib/text';
 import type { BuildInput, BuildJob, BuildSnapshot } from '@/lib/types';
+import { releaseDownloads } from '../../ranobelib-epub/src/cores/http.js';
 
 type Listener = (snapshot: BuildSnapshot | null) => void;
 
@@ -91,6 +92,8 @@ export function startBuild(input: BuildInput) {
         msg: messageOf(err),
         file: null,
       });
+    } finally {
+      releaseDownloads();
     }
   })();
 

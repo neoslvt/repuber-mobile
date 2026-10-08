@@ -1,0 +1,7 @@
+expo.modules.downloadprogress.download-progress-pngs-0 /run/media/alex/b9bd9a1e-a4cc-4d3f-aae2-8c8c1fd468cb/ranobe-lib-epub/repuber/modules/download-progress/android/build/generated/res/pngs/release
+expo.modules.downloadprogress.download-progress-resValues-1 /run/media/alex/b9bd9a1e-a4cc-4d3f-aae2-8c8c1fd468cb/ranobe-lib-epub/repuber/modules/download-progress/android/build/generated/res/resValues/release
+expo.modules.downloadprogress.download-progress-mergeReleaseResources-2 /run/media/alex/b9bd9a1e-a4cc-4d3f-aae2-8c8c1fd468cb/ranobe-lib-epub/repuber/modules/download-progress/android/build/intermediates/incremental/release/mergeReleaseResources/merged.dir
+expo.modules.downloadprogress.download-progress-mergeReleaseResources-3 /run/media/alex/b9bd9a1e-a4cc-4d3f-aae2-8c8c1fd468cb/ranobe-lib-epub/repuber/modules/download-progress/android/build/intermediates/incremental/release/mergeReleaseResources/stripped.dir
+expo.modules.downloadprogress.download-progress-release-4 /run/media/alex/b9bd9a1e-a4cc-4d3f-aae2-8c8c1fd468cb/ranobe-lib-epub/repuber/modules/download-progress/android/build/intermediates/merged_res/release/mergeReleaseResources
+expo.modules.downloadprogress.download-progress-main-5 /run/media/alex/b9bd9a1e-a4cc-4d3f-aae2-8c8c1fd468cb/ranobe-lib-epub/repuber/modules/download-progress/android/src/main/res
+expo.modules.downloadprogress.download-progress-release-6 /run/media/alex/b9bd9a1e-a4cc-4d3f-aae2-8c8c1fd468cb/ranobe-lib-epub/repuber/modules/download-progress/android/src/release/res
