@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Fonts } from '@/constants/theme';
@@ -15,6 +16,11 @@ export function Cover({ uri, width, title, radius = 10 }: CoverProps) {
   const theme = useTheme();
   const height = Math.round(width * 1.48);
   const letter = (title || 'R').trim().charAt(0).toUpperCase() || 'R';
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [uri]);
 
   return (
     <View
@@ -28,8 +34,14 @@ export function Cover({ uri, width, title, radius = 10 }: CoverProps) {
           backgroundColor: theme.backgroundSelected,
         },
       ]}>
-      {uri ? (
-        <Image source={{ uri }} style={styles.image} contentFit="cover" transition={180} />
+      {uri && !failed ? (
+        <Image
+          source={{ uri }}
+          style={styles.image}
+          contentFit="cover"
+          transition={180}
+          onError={() => setFailed(true)}
+        />
       ) : (
         <Text
           style={{
