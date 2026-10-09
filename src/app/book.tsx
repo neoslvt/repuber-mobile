@@ -276,7 +276,7 @@ export default function BookScreen() {
                         style={[
                           styles.branch,
                           { backgroundColor: on ? theme.backgroundElement : theme.background, borderColor: theme.border },
-                          { borderWidth: StyleSheet.hairlineWidth, borderColor: theme.border }
+                          { borderWidth: StyleSheet.hairlineWidth, borderColor: on ? theme.accent : theme.border }
                         ]}>
                         <Text style={[styles.branchName, { color: on ? theme.accent : theme.text }]}>{item.name}</Text>
                         <Text style={[styles.meta, { color: theme.textSecondary }]}>{item.chapters} chapters</Text>
@@ -320,7 +320,8 @@ export default function BookScreen() {
                         {
                           width: tileWidth ?? '48%',
                           backgroundColor: on ? theme.backgroundElement : theme.background,
-                          borderColor: theme.border, borderWidth: StyleSheet.hairlineWidth
+                          borderColor: on ? theme.accent : theme.border, 
+                          borderWidth: StyleSheet.hairlineWidth
                         },
                       ]}>
                       <Text style={[styles.volumeTitle, { color: on ? theme.accent : theme.text }]} numberOfLines={1}>
