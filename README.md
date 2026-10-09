@@ -14,6 +14,7 @@
 | RanobeLib | ✅ | ✅ | ✅ |
 | MangaHub | ✅ | ✅ | ✅ |
 | Yamiko | ✅ | ✅ | ✅ |
+| Flibusta | ✅ | ✅ | ✅ |
 
 ## Разработка
 
